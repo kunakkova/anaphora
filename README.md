@@ -1,1 +1,5 @@
 # anaphora
+
+Запускать:
+
+gui.py
