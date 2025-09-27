@@ -2,4 +2,4 @@
 
 Запускать:
 
-pyhton gui.py
+python gui.py
