@@ -127,10 +127,10 @@ class ReferentSearchDFA:
 
         if self.state == ReferentSearchState.FIND_PRONOUN_WORD:
             self.pronoun_word = None
-            for word, start, end in self.word_positions:
-                absolute_start = self.current_sentence_start + start if self.current_sentence_idx > 0 else start
-                if absolute_start <= self.pronoun_position <= absolute_start + len(word):
-                    self.pronoun_word = word
+            import re
+            for m in re.finditer(r"[А-ЯЁа-яё]+", self.text):
+                if m.start() <= self.pronoun_position < m.end():
+                    self.pronoun_word = self.text[m.start():m.end()]
                     break
             self.state = ReferentSearchState.ADD_ADDRESSED_ENTITY
             return True
@@ -162,7 +162,7 @@ class ReferentSearchDFA:
 
         if self.state == ReferentSearchState.ADD_SPEAKER_CONTEXT:
             if self.pronoun_word:
-                speaker = get_speaker_context(self.pronoun_word, self.text)
+                speaker = get_speaker_context(self.pronoun_word, self.text, self.pronoun_position)
                 if speaker:
                     parsed = morph.parse(speaker)[0]
                     gender = parsed.tag.gender

@@ -61,22 +61,38 @@ def find_addressed_entity(pronoun, sentence):
             return addressed
     return None
 
-def get_speaker_context(pronoun, text):
+def get_speaker_context(pronoun, text, pronoun_pos):
     norm_pronoun = pronoun.lower()
     quotes_pattern = r'«[^«»]*?»|\"[^\"]*?\"'
     speeches = list(re.finditer(quotes_pattern, text))
-    pronoun_pos = text.lower().find(norm_pronoun)
-    if pronoun_pos != -1:
+    if pronoun_pos is not None and pronoun_pos != -1:
         for s in speeches:
             if s.start() <= pronoun_pos < s.end():
                 before = text[:s.start()].strip()
                 after = text[s.end():].strip()
                 before_author_match = re.search(r'([А-ЯЁа-яё]+\s+[А-ЯЁа-яё]+|[А-ЯЁа-яё]+)\s*[:,-]\s*$', before)
                 if before_author_match:
-                    return before_author_match.group(0).strip(' :,-')
-                after_author_match = re.search(r'^[\s,.\-–—]*([А-ЯЁа-яё]+\s+[А-ЯЁа-яё]+|[А-ЯЁа-яё]+)', after)
-                if after_author_match:
-                    return after_author_match.group(1).strip()
+                    candidate = before_author_match.group(1).strip()
+                    words = re.findall(r'[А-ЯЁа-яё]+', candidate)
+                    if words:
+                        last_two = words[-2:] if len(words) >= 2 else words
+                        name_parts = []
+                        for w in last_two:
+                            if get_pos(w) == 'NOUN':
+                                name_parts.append(w)
+                        if name_parts:
+                            return " ".join(name_parts)
+                    return candidate
+                tail = re.sub(r'^[\s,.\-–—]+', '', after)
+                tokens = re.findall(r'[А-ЯЁа-яё]+', tail)
+                i = 0
+                while i < len(tokens) and get_pos(tokens[i]) != 'NOUN':
+                    i += 1
+                if i < len(tokens):
+                    name_parts = [tokens[i]]
+                    if i + 1 < len(tokens) and get_pos(tokens[i + 1]) == 'NOUN':
+                        name_parts.append(tokens[i + 1])
+                    return " ".join(name_parts)
                 return None
     lines = text.split('\n')
     pronoun_in_speech_line = False

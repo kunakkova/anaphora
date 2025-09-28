@@ -167,7 +167,8 @@ class PossessiveFilterDFA:
 
         if self.state == PossessiveFilterState.HANDLE_IX:
             if self.norm_pron == 'их':
-                self.filtered = [cand for cand in self.candidates if cand['number'] == 'plur']
+                non_pron_plural = [c for c in self.candidates if c['number'] == 'plur' and c.get('pos') != 'NPRO']
+                self.filtered = non_pron_plural if non_pron_plural else [cand for cand in self.candidates if cand['number'] == 'plur']
                 self.state = PossessiveFilterState.DONE
                 return True
             self.state = PossessiveFilterState.HANDLE_1_2_POSSESSIVES
@@ -289,8 +290,7 @@ class RelativeFilterDFA:
                         if 'inan' in parsed.tag:
                             self.filtered = [cand]
                             break
-                elif self.norm_pron in {'который', 'которая', 'которого', 'которую', 'которым', 'котором', 'которой', 'которому',
-                                        'чей', 'чья', 'чьего', 'чьей', 'чьим', 'чьему'}:
+                elif self.norm_pron in {'который', 'которая', 'которого', 'которую', 'которым', 'котором', 'которой', 'которому'}:
                     parsed_pron = self.morph.parse(self.pronoun)[0]
                     if pos == 'NOUN':
                         parsed_c = self.morph.parse(cand['word'])[0]
@@ -298,7 +298,7 @@ class RelativeFilterDFA:
                             (parsed_c.tag.gender == parsed_pron.tag.gender or parsed_c.tag.gender is None)):
                             self.filtered = [cand]
                             break
-                elif self.norm_pron in {'которые', 'чьи', 'которых', 'чьих', 'которыми', 'чьими', 'которым', 'чьим'}:
+                elif self.norm_pron in {'которые', 'которых', 'которыми', 'которым'}:
                     parsed_pron = self.morph.parse(self.pronoun)[0]
                     pron_number = parsed_pron.tag.number
                     suitable_candidates = []
@@ -314,6 +314,10 @@ class RelativeFilterDFA:
                                 suitable_candidates.append(c)
                     if suitable_candidates:
                         self.filtered = suitable_candidates
+                        break
+                elif self.norm_pron in {'чей', 'чья', 'чьего', 'чьей', 'чьим', 'чьему', 'чьи', 'чьих', 'чьими', 'чьим'}:
+                    if pos == 'NOUN':
+                        self.filtered = [cand]
                         break
             self.state = RelativeFilterState.DONE
             return True

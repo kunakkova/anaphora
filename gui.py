@@ -52,7 +52,6 @@ class AnaphoraGUI(tk.Tk):
         content = tk.Frame(self, bg=PINK_BG)
         content.pack(fill=tk.BOTH, expand=True, padx=18, pady=12)
 
-        # Top panel (input)
         top = tk.Frame(content, bg=PINK_BG)
         top.pack(side=tk.TOP, fill=tk.X, expand=False, pady=(0, 8))
         in_label = tk.Label(top, text="Входной текст", bg=PINK_BG, fg=TEXT_FG, font=("Segoe UI", 14, "bold"))
@@ -75,7 +74,6 @@ class AnaphoraGUI(tk.Tk):
         self.input_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         in_scroll.pack(side=tk.RIGHT, fill=tk.Y)
 
-        # Actions
         actions = tk.Frame(content, bg=PINK_BG)
         actions.pack(side=tk.TOP, fill=tk.X, expand=False, pady=(6, 6))
         annotate_btn = ttk.Button(actions, text="Аннотировать", style="Pink.TButton", command=self.on_annotate)
@@ -85,7 +83,6 @@ class AnaphoraGUI(tk.Tk):
         copy_btn = ttk.Button(actions, text="Копировать результат", style="Pink.TButton", command=self.on_copy)
         copy_btn.pack(side=tk.LEFT, padx=(12, 0))
 
-        # Bottom panel (output)
         bottom = tk.Frame(content, bg=PINK_BG)
         bottom.pack(side=tk.TOP, fill=tk.BOTH, expand=True, pady=(8, 0))
         out_label = tk.Label(bottom, text="Аннотированный текст", bg=PINK_BG, fg=TEXT_FG, font=("Segoe UI", 14, "bold"))

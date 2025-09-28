@@ -107,7 +107,6 @@ class AnaphoraDFA:
             return True
 
         if self.state == DFAState.RANKED:
-            # Recursively resolve if reference is a pronoun to match original behavior
             def recursive_resolve_reference(reference_word: str, text: str, depth: int = 0, max_depth: int = 5) -> str:
                 if depth > max_depth or reference_word == 'None':
                     return reference_word
@@ -138,11 +137,13 @@ class AnaphoraDFA:
                 else:
                     filt = cands
                 if isinstance(filt, list):
-                    if len(filt) > 1:
-                        ranked2 = rank_candidates(filt, pronoun_pos, text, morph)
+                    preferred = [c for c in filt if c.get('pos') != 'NPRO']
+                    pool = preferred if preferred else filt
+                    if len(pool) > 1:
+                        ranked2 = rank_candidates(pool, pronoun_pos, text, morph)
                         new_ref = ranked2[0]['word'] if ranked2 else 'None'
-                    elif len(filt) == 1:
-                        new_ref = filt[0]['word']
+                    elif len(pool) == 1:
+                        new_ref = pool[0]['word']
                     else:
                         new_ref = 'None'
                 elif filt is None:
