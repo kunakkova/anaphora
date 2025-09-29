@@ -113,6 +113,22 @@ def get_speaker_context(pronoun, text, pronoun_pos):
                             return author_line
     return None
 
+def get_attribution_entities(pronoun, text, pronoun_pos):
+    norm_pronoun = pronoun.lower() if pronoun else ''
+    quotes_pattern = r'«[^«»]*?»|\"[^\"]*?\"'
+    entities = []
+    speeches = list(re.finditer(quotes_pattern, text))
+    if pronoun_pos is not None and pronoun_pos != -1:
+        for s in speeches:
+            if s.start() <= pronoun_pos < s.end():
+                after = text[s.end():]
+                tokens = re.findall(r'[А-ЯЁа-яё]+', after)
+                for w in tokens:
+                    if get_pos(w) == 'NOUN':
+                        entities.append(w)
+                break
+    return entities
+
 def is_subject_simple(word, sentence, morph):
     normalized_word = word.lower().replace('ё', 'е')
     parsed = morph.parse(word)[0]

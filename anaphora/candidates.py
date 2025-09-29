@@ -1,6 +1,6 @@
 from .morph import morph, normalize_word, get_pos
 from .resources import all_pronouns, collective_nouns, common_gender_nouns
-from .helpers import find_coord_groups, find_addressed_entity, get_speaker_context
+from .helpers import find_coord_groups, find_addressed_entity, get_speaker_context, get_attribution_entities
 from .tokenization import get_sentences, get_words
 
 def is_collective_noun(word):
@@ -168,6 +168,16 @@ class ReferentSearchDFA:
                     gender = parsed.tag.gender
                     number = parsed.tag.number
                     self.add_candidate(speaker, -1, -1, 'NOUN', speaker.lower(), gender, number)
+                # Also add nouns from attribution (e.g., after quotes) as potential candidates
+                # but only for third-person pronouns
+                pron_parsed = morph.parse(self.pronoun_word)[0]
+                if getattr(pron_parsed.tag, 'person', None) == '3per':
+                    attribution_entities = get_attribution_entities(self.pronoun_word, self.text, self.pronoun_position)
+                    for ent in attribution_entities:
+                        parsed_e = morph.parse(ent)[0]
+                        gender_e = parsed_e.tag.gender
+                        number_e = parsed_e.tag.number
+                        self.add_candidate(ent, -1, -1, 'NOUN', ent.lower(), gender_e, number_e)
             self.state = ReferentSearchState.DONE
             return True
 
