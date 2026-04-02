@@ -168,8 +168,6 @@ class ReferentSearchDFA:
                     gender = parsed.tag.gender
                     number = parsed.tag.number
                     self.add_candidate(speaker, -1, -1, 'NOUN', speaker.lower(), gender, number)
-                # Also add nouns from attribution (e.g., after quotes) as potential candidates
-                # but only for third-person pronouns
                 pron_parsed = morph.parse(self.pronoun_word)[0]
                 if getattr(pron_parsed.tag, 'person', None) == '3per':
                     attribution_entities = get_attribution_entities(self.pronoun_word, self.text, self.pronoun_position)
