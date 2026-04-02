@@ -1,3 +1,4 @@
+from typing import Optional
 from .morph import get_pos, normalize_word
 from .resources import (
     personal_pronouns,
@@ -5,6 +6,7 @@ from .resources import (
     ambiguous_pronouns,
     reflexive_pronouns,
     relative_pronouns,
+    demonstrative_pronouns,
 )
 
 
@@ -16,17 +18,18 @@ class PronounTypeState:
     CHECK_PERSONAL = "CHECK_PERSONAL"
     CHECK_POSSESSIVE = "CHECK_POSSESSIVE"
     CHECK_REFLEXIVE = "CHECK_REFLEXIVE"
+    CHECK_DEMONSTRATIVE = "CHECK_DEMONSTRATIVE"
     CHECK_RELATIVE = "CHECK_RELATIVE"
     DONE = "DONE"
 
 
 class PronounTypeDFA:
-    def __init__(self, word: str, next_word: str | None):
+    def __init__(self, word: str, next_word: Optional[str]):
         self.original_word = word
         self.next_word = next_word
-        self.word_norm: str | None = None
-        self.next_pos: str | None = None
-        self.result_type: str | None = None
+        self.word_norm: Optional[str] = None
+        self.next_pos: Optional[str] = None
+        self.result_type: Optional[str] = None
         self.state: str = PronounTypeState.START
 
     def step(self) -> bool:
@@ -76,6 +79,14 @@ class PronounTypeDFA:
                 self.result_type = 'возвратное'
                 self.state = PronounTypeState.DONE
             else:
+                self.state = PronounTypeState.CHECK_DEMONSTRATIVE
+            return True
+
+        if self.state == PronounTypeState.CHECK_DEMONSTRATIVE:
+            if self.word_norm in demonstrative_pronouns:
+                self.result_type = 'указательное'
+                self.state = PronounTypeState.DONE
+            else:
                 self.state = PronounTypeState.CHECK_RELATIVE
             return True
 
@@ -92,7 +103,7 @@ class PronounTypeDFA:
 
         return False
 
-    def run(self) -> str | None:
+    def run(self) -> Optional[str]:
         while self.step():
             pass
         return self.result_type

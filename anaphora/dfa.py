@@ -8,6 +8,7 @@ from .filters import (
     filter_relative_candidates,
 )
 from .reflexive import filter_reflexive_candidates
+from .demonstrative import find_demonstrative_candidates, filter_demonstrative_candidates
 from .resources import idioms
 from .ranking import rank_candidates
 from .morph import normalize_word, morph
@@ -66,8 +67,13 @@ class AnaphoraDFA:
             return True
 
         if self.state == DFAState.TYPE_DETERMINED:
-            s, _ = self.current_pronoun_span
-            self.candidates = find_candidates(self.original_text, s)
+            s, e = self.current_pronoun_span
+            if self.current_type == 'указательное':
+                self.candidates = find_demonstrative_candidates(
+                    self.original_text, s, self.current_pronoun
+                )
+            else:
+                self.candidates = find_candidates(self.original_text, s)
             self.state = DFAState.CANDIDATES_FOUND
             return True
 
@@ -75,6 +81,7 @@ class AnaphoraDFA:
             text = self.original_text
             pron = self.current_pronoun
             pron_norm = normalize_word(pron)
+            s, e = self.current_pronoun_span
             if self.current_type == 'личное':
                 self.filtered = filter_personal_candidates(self.candidates, pron, morph, text)
             elif self.current_type == 'притяжательное':
@@ -83,6 +90,11 @@ class AnaphoraDFA:
                 self.filtered = filter_reflexive_candidates(self.candidates, pron, morph, text, idioms)
             elif self.current_type == 'относительное':
                 self.filtered = filter_relative_candidates(self.candidates, pron, morph, text)
+            elif self.current_type == 'указательное':
+                same_cands, prev_cands = self.candidates
+                self.filtered = filter_demonstrative_candidates(
+                    same_cands, prev_cands, pron, morph, text, s, e
+                )
             else:
                 self.filtered = self.candidates
             self.state = DFAState.FILTERED
@@ -101,8 +113,10 @@ class AnaphoraDFA:
                     self.reference_word = 'None'
             elif filtered is None:
                 self.reference_word = 'None'
-            else:
+            elif isinstance(filtered, dict):
                 self.reference_word = filtered.get('word', 'None')
+            else:
+                self.reference_word = 'None'
             self.state = DFAState.RANKED
             return True
 
@@ -117,7 +131,6 @@ class AnaphoraDFA:
                         break
                 if pronoun_pos is None:
                     return reference_word
-                # determine type for the reference pronoun
                 next_word = None
                 if end < len(text):
                     import re
@@ -125,17 +138,25 @@ class AnaphoraDFA:
                     if m:
                         next_word = m.group(0)
                 ptype = determine_pronoun_type(reference_word, next_word)
-                cands = find_candidates(text, pronoun_pos)
-                if ptype == 'личное':
-                    filt = filter_personal_candidates(cands, reference_word, morph, text)
-                elif ptype == 'притяжательное':
-                    filt = filter_possessive_candidates(cands, normalize_word(reference_word), morph, text)
-                elif ptype == 'возвратное':
-                    filt = filter_reflexive_candidates(cands, reference_word, morph, text, idioms)
-                elif ptype == 'относительное':
-                    filt = filter_relative_candidates(cands, reference_word, morph, text)
+                if ptype == 'указательное':
+                    same_c, prev_c = find_demonstrative_candidates(text, pronoun_pos, reference_word)
+                    pron_end = pronoun_pos + len(reference_word)
+                    filt = filter_demonstrative_candidates(
+                        same_c, prev_c, reference_word, morph, text,
+                        pronoun_pos, pron_end
+                    )
                 else:
-                    filt = cands
+                    cands = find_candidates(text, pronoun_pos)
+                    if ptype == 'личное':
+                        filt = filter_personal_candidates(cands, reference_word, morph, text)
+                    elif ptype == 'притяжательное':
+                        filt = filter_possessive_candidates(cands, normalize_word(reference_word), morph, text)
+                    elif ptype == 'возвратное':
+                        filt = filter_reflexive_candidates(cands, reference_word, morph, text, idioms)
+                    elif ptype == 'относительное':
+                        filt = filter_relative_candidates(cands, reference_word, morph, text)
+                    else:
+                        filt = cands
                 if isinstance(filt, list):
                     preferred = [c for c in filt if c.get('pos') != 'NPRO']
                     pool = preferred if preferred else filt
@@ -148,8 +169,10 @@ class AnaphoraDFA:
                         new_ref = 'None'
                 elif filt is None:
                     new_ref = 'None'
-                else:
+                elif isinstance(filt, dict):
                     new_ref = filt.get('word', 'None')
+                else:
+                    new_ref = 'None'
                 if new_ref == reference_word or new_ref == 'None':
                     return new_ref
                 return recursive_resolve_reference(new_ref, text, depth + 1, max_depth)
